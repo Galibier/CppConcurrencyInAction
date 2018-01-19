@@ -1,6 +1,8 @@
 #include <thread>
 #include <atomic>
 #include <iostream>
+//原子加载就是“获取”(acquire)操作(memory_order_acquire)，原子存储就是“释放”操作(memory_order_release)，原子读-改-写操作(例如fetch_add()或exchange())在这里，不是“获取”，就是“释放”，或者两者兼有的操作(memory_order_acq_rel)。
+//https://www.zhihu.com/question/24301047
 
 std::atomic<int> x(0), y(0), z(0);
 std::atomic<bool> go(false);

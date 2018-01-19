@@ -12,17 +12,17 @@ void populate_queue() {
 	for (unsigned i = 0; i < number_of_items; i++) {
 		queue_data.push_back(i);
 	}
-	count.store(number_of_items, std::memory_order_release);
+	count.store(number_of_items, std::memory_order_release);// 1 初始化存储
 }
 
 void consume_queue_items() {
 	while (true) {
 		int item_index;
-		if ((item_index = count.fetch_sub(1, std::memory_order_acquire)) <= 0) {
-			wait_for_more_items();
+		if ((item_index = count.fetch_sub(1, std::memory_order_acquire)) <= 0) {// 2 一个“读-改-写”操作
+			wait_for_more_items();// 3 等待更多元素
 			continue;
 		}
-		prcocess(queue_data[item_index - 1]);
+		prcocess(queue_data[item_index - 1]);// 4 安全读取queue_data
 	}
 }
 

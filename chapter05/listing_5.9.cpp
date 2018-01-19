@@ -11,21 +11,21 @@ void thread_1() {
 	data[2].store(17, std::memory_order_relaxed);
 	data[3].store(-141, std::memory_order_relaxed);
 	data[4].store(2003, std::memory_order_relaxed);
-	sync1.store(true, std::memory_order_release);
+	sync1.store(true, std::memory_order_release);//1
 }
 
 void thread_2() {
-	while (!sync1.load(std::memory_order_acquire));
-	sync2.store(std::memory_order_release);
+	while (!sync1.load(std::memory_order_acquire));//2
+	sync2.store(std::memory_order_release);//3
 }
 
 void thread_3() {
-	while (!sync2.load(std::memory_order_acquire));
+	while (!sync2.load(std::memory_order_acquire));//4
 	assert(data[0].load(std::memory_order_relaxed) == 42);
 	assert(data[1].load(std::memory_order_relaxed) == 97);
 	assert(data[2].load(std::memory_order_relaxed) == 17);
 	assert(data[3].load(std::memory_order_relaxed) == -141);
-	assert(data[4].load(std::memory_order_relaxed) == 2003);
+	assert(data[4].load(std::memory_order_relaxed) == 2003);//实现同步，不会触发
 }
 
 int main() {
