@@ -3,7 +3,7 @@
 
 template<typename T>
 void do_delete(void* p) {
-	delete static_cast<T*>(p);
+	delete static_cast<T*>(p);//删除时只能对实际类型，故转换
 }
 
 struct data_to_reclaim {
@@ -20,23 +20,24 @@ struct data_to_reclaim {
 std::atomic<data_to_reclaim*> nodes_to_reclaim;
 void add_to_reclaim_list(data_to_reclaim* node) {
 	node->next = nodes_to_reclaim.load();
-	while (!nodes_to_reclaim.compare_exchange_weak(node->next, node));
+	while (!nodes_to_reclaim.compare_exchange_weak(node->next, node))//更新nodes_to_reclaim 链表头
+		;
 }
 
 template <typename T>
-void reclaim_later(T* data) {
-	add_to_reclaim_list(new data_to_reclaim(data));
+void reclaim_later(T* data) {// 4 风险指针是一个通用解决方案
+	add_to_reclaim_list(new data_to_reclaim(data));// 5 添加到链表头部
 }
 
 void delete_nodes_with_no_hazards() {
-	data_to_reclaim* current = nodes_to_reclaim.exchange(nullptr);
+	data_to_reclaim* current = nodes_to_reclaim.exchange(nullptr);// 6 保证只有一个线程回收这些节点
 	while (current) {
 		data_to_reclaim* const next = current->next;
-		if (!outstanding_hazard_pointers_for(current->data)) {
+		if (!outstanding_hazard_pointers_for(current->data)) {// 7 检查节点是否被风险指针引用
 			delete current;
 		}
 		else {
-			add_to_reclaim_list(current);
+			add_to_reclaim_list(current);//添加到链表
 		}
 		current = next;
 	}

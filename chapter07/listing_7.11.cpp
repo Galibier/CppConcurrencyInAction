@@ -23,6 +23,7 @@ private:
 			new_counter = old_counter;
 			++new_counter.external_count;
 		} while (!head.compare_exchange_strong(old_counter, new_counter));
+		// 1 保证指针不会在同一时间内被其他线程修改
 		old_counter.external_count = new_counter.external_count;
 	}
 public:
@@ -42,20 +43,25 @@ public:
 		counted_node_ptr old_head = head.load();
 		for (;;) {
 			increase_head_count(old_head);
-			node* const ptr = old_head.ptr;
+			node* const ptr = old_head.ptr;// 2 当计数增加，就能安全的解引用
 			if (!ptr) {
 				return std::shared_ptr<T>();
 			}
-			if (head.compare_exchange_strong(old_head, ptr->next)) {
+			if (head.compare_exchange_strong(old_head, ptr->next)) {//删除节点
 				std::shared_ptr<T> res;
 				res.swap(ptr->data);
 				int const count_increase = old_head.external_count - 2;
+				/* 5 相加的值要比外部引用计数少2。
+                *当节点已经从链表中删除，就要减少一次计数
+                *（这是基本的一次减去，相当于减在内部计数），
+                *并且这个线程无法再次访问指定节点，所以还要再减一
+                */
 				if (ptr->internal_count.fetch_add(count_increase) == -count_increase) {
 					delete ptr;
 				}
 				return res;
 			}
-			else if (ptr->internal_count.fetch_sub(1) == 1) {
+			else if (ptr->internal_count.fetch_sub(1) == 1) {//返回相减前的值，如果当前线程是最后一个持有引用线程
 				delete ptr;
 			}
 		}

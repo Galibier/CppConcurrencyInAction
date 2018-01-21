@@ -21,19 +21,22 @@ private:
 		}
 	}
 
-	void try_reclaim(node* old_head) {
-		if (threads_in_pop == 1) {
+	void try_reclaim(node* old_head) {//节点调用即删除（于原链表）
+		if (threads_in_pop == 1) {//当前线程正对pop访问
 			node* nodes_to_delete = to_be_deleted.exchange(nullptr);
-			if (!--threads_in_pop) {
-				delete_nodes(nodes_to_delete);
+            // 2 声明“可删除”列表，该函数返回：The contained value before the call.
+            //下面进行检查，决定删除等待链表，还是还原to_be_delted
+			if (!--threads_in_pop) {//是否只有一个线程调用pop（）
+				delete_nodes(nodes_to_delete);//迭代删除等待链表
 			}
-			else if (nodes_to_delete) {
-				chain_pending_nodes(nodes_to_delete);
+			else if (nodes_to_delete) {//存在
+				chain_pending_nodes(nodes_to_delete);// 6 nodes还原to_be_deleted=nodes_to_delete
 			}
 			delete old_head;
 		}
 		else {
-			chain_pending_node(old_head);
+			chain_pending_node(old_head);// 8 向等待列表中继续添加节点node
+										 //此时to_be_deleted为old_head
 			--threads_in_pop;
 		}
 	}
@@ -48,12 +51,12 @@ private:
 
 	void chain_pending_nodes(node* first, node* last) {
 		last->next = to_be_deleted;
-		while (!to_be_deleted.compare_exchange_weak(last->next, first))
+		while (!to_be_deleted.compare_exchange_weak(last->next, first))// 11 用循环来保证last->next的正确性，存储第一个节点
 			;
 	}
 
 	void chain_pending_nodes(node* n) {
-		chain_pending_nodes(n, n);
+		chain_pending_nodes(n, n);/*添加单个节点是一种特殊情况，因为这需要将这个节点作为第一个节点，同时也是最后一个节点进行添加。*/
 	}
 
 public:

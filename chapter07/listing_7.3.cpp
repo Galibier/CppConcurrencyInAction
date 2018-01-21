@@ -21,7 +21,7 @@ public:
 
 	std::shared_ptr<T> pop() {
 		node* old_head = head.load();
-		while (old_head && !head.compare_exchange_weak(old_head, old_head->next))
+		while (old_head && !head.compare_exchange_weak(old_head, old_head->next))// 3 在解引用前检查old_head是否为空指针
 			;
 		return old_head ? old_head->data : std::shared_ptr<T>();
 	}

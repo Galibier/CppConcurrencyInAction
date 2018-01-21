@@ -57,7 +57,7 @@ public:
 			increase_external_count(head, old_head);
 			node* const ptr = old_head.ptr;
 			if (ptr == tail.load().ptr) {
-				ptr->release_ref();
+				ptr->release_ref();// 3 当head与tail节点相同的时候，就能对引用进行释放
 				return std::unique_ptr<T>();
 			}
 			if (head.compare_exchange_strong(old_head, ptr->next)) {
@@ -65,7 +65,7 @@ public:
 				free_external_counter(old_head);
 				return std::unique_ptr<T>(res);
 			}
-			ptr->release_ref();
+			ptr->release_ref();// 6 当外部计数或指针有所变化时，需要将引用释放后，再次进行循环
 		}
 	}
 };

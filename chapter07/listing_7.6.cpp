@@ -63,27 +63,27 @@ public:
 		while (!head.compare_exchange_weak(new_node->next, new_node));
 	}
 	std::shared_ptr<T> pop() {
-		std::atomic<void*>& hp = get_hazard_pointer_for_current_thread();
-		node* old_head = head.load();
-		do {
+		std::atomic<void*>& hp = get_hazard_pointer_for_current_thread();//可以返回风险指针的引用
+		node* old_head = head.load();//确保正确设置
+		do {//循环保证node不会在读取旧head指针时，以及在设置风险指针的时被删除
 			node* temp;
-			do {
+			do {// 1 直到将风险指针设为head指针
 				temp = old_head;
 				hp.store(old_head);
 				old_head = head.load();
 			} while (old_head != temp);
 		} while (old_head && !head.compare_exchange_strong(old_head, old_head->next));
-		hp.store(nullptr);
+		hp.store(nullptr);// 2 当声明完成，清除风险指针
 		std::shared_ptr<T> res;
 		if (old_head) {
 			res.swap(old_head->data);
-			if (outstanding_hazard_pointers_for(old_head)) {
-				reclaim_later(old_head);
+			if (outstanding_hazard_pointers_for(old_head)) {// 3 在删除之前对风险指针引用的节点进行检查，是否被引用
+				reclaim_later(old_head);// 4 有，存放链表中
 			}
 			else {
-				delete old_head;
+				delete old_head;// 5 没有，直接删除
 			}
-			delete_nodes_with_no_hazards();
+			delete_nodes_with_no_hazards();// 6 检查链表，是否有风险指针引用
 		}
 		return res;
 	}

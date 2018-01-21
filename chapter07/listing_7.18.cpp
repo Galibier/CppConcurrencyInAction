@@ -39,13 +39,14 @@ private:
 			}
 		}
 	};
+	/*静态成员函数，通过将外部计数器作为第一个参数传入函数，对其进行更新，而非只操作一个固定的计数器（传入了两个参数）。*/
 	static void increase_external_count(std::atomic<counted_node_ptr>& counter, counted_node_ptr& old_counter) {
 		counted_node_ptr new_counter;
 		do {
 			new_counter = old_counter;
 			++new_counter.external_count;
 		} while (!counter.compare_exchange_strong(old_counter, new_counter, std::memory_order_acquire, std::memory_order_relaxed));
-		old_counter.external_count = new_counter.external_count;
+		old_counter.external_count = new_counter.external_count;//非原子类型
 	}
 
 public:

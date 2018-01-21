@@ -33,7 +33,8 @@ private:
 			do {
 				new_counter = old_counter;
 				--new_counter.internal_count;
-			} while (!count.compare_exchange_strong(old_counter, new_counter, std::memory_order_acquire, std::memory_order_relaxed));
+			} while (!count.compare_exchange_strong(old_counter, new_counter, std::memory_order_acquire, std::memory_order_relaxed));// 2保证更新成功
+			/*降低internal_count时，在内外部计数都为0时，就代表这是最后一次引用，之后就可以将这个节点删除。*/
 			if (!new_counter.internal_count && !new_counter.external_counters) {
 				delete this;
 			}
