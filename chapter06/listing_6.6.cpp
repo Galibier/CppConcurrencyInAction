@@ -1,6 +1,7 @@
 #include <mutex>
 #include <memory>
 
+//这里选择修改虚拟节点的数据指针来push，避免了try_pop和push对同一节点进行操作。
 template<typename T>
 class threadsafe_queue
 {

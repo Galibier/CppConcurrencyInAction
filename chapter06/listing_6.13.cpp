@@ -23,22 +23,23 @@ public:
 	threadsafe_list& operator=(threadsafe_list const& other) = delete;
 
 	void push_front(T const& value) {
-		std::unique_ptr<node> new_node(new node(value));
+		std::unique_ptr<node> new_node(new node(value));//指向新节点的指针
 		std::lock_guard<std::mutex> lk(head.m);
-		new_node->next = std::move(head.next);
+		new_node->next = std::move(head.next);//修改指针，unique只能move
 		head.next = std::move(new_node);
 	}
 
+	//将风险都转移到传入的谓词（函数），交由用户决定处理
 	template<typename Function>
-	void for_each(Function f) {
+	void for_each(Function f) {// 7，模板函数出现新的类
 		node* current = &head;
 		std::unique_lock<std::mutex> lk(head.m);
-		while (node* const next = current->next.get()) {
-			std::unique_lock<std::mutex> next_lk(next->m);
-			lk.unlock();
-			f(*next->data);
+		while (node* const next = current->next.get()) {//遍历
+			std::unique_lock<std::mutex> next_lk(next->m);//逐个上锁
+			lk.unlock();//前驱结点解锁
+			f(*next->data);//对数据处理
 			current = next;
-			lk = std::move(next_lk);
+			lk = std::move(next_lk);//将锁移至前驱
 		}
 	}
 
@@ -49,7 +50,7 @@ public:
 		while (node* const next = current->next.get()) {
 			std::unique_lock<std::mutex> next_lk(next->m);
 			lk.unlock();
-			if (p(*next->data)) {
+			if (p(*next->data)) {//判断
 				return next->data;
 			}
 			current = next;
@@ -65,8 +66,8 @@ public:
 		while (node* const next = current->next.get()) {
 			std::unique_lock<std::mutex> next_lk(next->m);
 			if (p(*next->data)) {
-				std::unique_ptr<node> old_next = std::move(current->next);
-				current->next = std::move(next->next);
+				std::unique_ptr<node> old_next = std::move(current->next);//取出前驱结点的后继指针
+				current->next = std::move(next->next);//修改前驱结点的后继指针
 				next_lk.unlock();
 			}
 			else {

@@ -53,6 +53,8 @@ public:
 	}
 
 	void push(T new_value) {
+		//push中实例分配完毕，唤醒线程，不会发生内存分配失败（不用构造新的std::shared_ptr<>实例，分配内存），也就不会锁在线程（继续等待push，其他线程沉睡）中。
+		//同时，内存分配的方式提升了队列工作效率，在分配内存的时候，可以让其他线程对队列进行操作。
 		std::shared_ptr<T> data(std::make_shared<T>(std::move(new_value)));
 		std::lock_guard<std::mutex> lk(mut);
 		data_queue.push(data);
