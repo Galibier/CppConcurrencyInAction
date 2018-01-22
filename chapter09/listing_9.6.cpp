@@ -91,8 +91,11 @@ public:
 
 class thread_pool {
 	std::atomic_bool done;
+	//全局队列
 	thread_safe_queue<function_wrapper> pool_work_queue;
+	// 1 普通队列，只有一个线程访问
 	typedef std::queue<function_wrapper> local_queue_type;
+	// 2 不希望非线程池中的线程也拥有一个任务队列，up指向线程本地的工作队列
 	static thread_local std::unique_ptr<local_queue_type> local_work_queue;
 	std::vector<std::thread> threads;
 	join_threads joiner;
@@ -128,7 +131,7 @@ public:
 
 		std::packaged_task<result_type()> task(f);
 		std::future<result_type> res(task.get_future());
-		if (local_work_queue) {
+		if (local_work_queue) {// 4 检查当前线程是否具有一个工作队列
 			local_work_queue->push(std::move(task));
 		}
 		else {
@@ -139,12 +142,13 @@ public:
 
 	void run_pending_task() {
 		function_wrapper task;
+        // 6 检查当前线程是否具有一个工作队列，该队列是否有任务
 		if (local_work_queue && !local_work_queue->empty()) {
 			task = std::move(local_work_queue->front());
 			local_work_queue->pop();
 			task();
 		}
-		else if (pool_work_queue.try_pop(task)) {
+		else if (pool_work_queue.try_pop(task)) {// 7 从全局队列获取任务
 			task();
 		}
 		else {

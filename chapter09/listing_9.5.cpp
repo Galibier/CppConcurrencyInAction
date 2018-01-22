@@ -1,3 +1,9 @@
+#include "thread_pool.h"
+#include <iostream>
+#include <list>
+#include <future>
+#include <chrono>
+
 template<typename T>
 struct sorter {
 	thread_pool pool;
@@ -15,7 +21,7 @@ struct sorter {
 		std::future<std::list<T>> new_lower = pool.submit(std::bind(&sorter::do_sort, this, std::move(new_lower_chunk)));
 		std::list<T> new_higher(do_sort(chunk_data));
 		result.splice(result.end(), new_higher);
-		while (!new_lower.wait_for(std::chrono::seconds(0)) == std::future_status::timeout) {
+		while (new_lower.wait_for(std::chrono::seconds(0)) == std::future_status::timeout) {
 			pool.run_pending_task();
 		}
 		result.splice(result.begin(), new_lower.get());
@@ -30,4 +36,13 @@ std::list<T> parallel_quick_sort(std::list<T> input) {
 	}
 	sorter<T> s;
 	return s.do_sort(input);
+}
+
+int main() {
+	std::list<int> l{ 35,3,4,44,66,22,11,222,333,55,1,0,9,6,35,3,4,44,66,22,11,222,333,55,1,0,9,6 };
+	auto r = parallel_quick_sort(l);//9ms
+	for (const auto &im : r)
+		std::cout << im << std::endl;
+	system("pause");
+	return 0;
 }

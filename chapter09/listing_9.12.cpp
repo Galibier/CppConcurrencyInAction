@@ -51,8 +51,13 @@ public:
 			custom_lock(interrupt_flag* self_, std::condition_variable_any& cond, Lockable& lk_)
 				:self(self_), lk(lk_) {
 				self->set_clear_mutex.lock();
-				self->thread_cond_any = &cond;
-			}
+				// 1 自定义的锁类型在构造的时候，需要所锁住内部set_clear_mutex
+                self->thread_cond_any = &cond; 
+                // 2 对thread_cond_any指针进行设置
+                //引用std::condition_variable_any 传入锁的构造函数中
+            }
+            // 3 当条件变量调用自定义锁的unlock()函数中的wait()时，
+            //就会对Lockable对象和set_clear_mutex（mutex）进行解锁
 
 			void unlock() {
 				lk.unlock();
@@ -61,15 +66,23 @@ public:
 
 			void lock() {
 				std::lock(self->set_clear_mutex, lk);
+                /* 4 当wait()结束等待(因为等待，或因为伪苏醒)，
+                *因为线程将会调用lock()函数，
+                *这里依旧要求锁住内部set_clear_mutex，并且锁住Lockable对象
+                */
 			}
 
 			~custom_lock() {
 				self->thread_cond_any = 0;
+				/* 5 在wait()调用时，custom_lock的析构函数中
+                *清理thread_cond_any指针(同样会解锁set_clear_mutex)之前，
+                *可以再次对中断进行检查。
+                */
 				self->set_clear_mutex.unlock();
 			}
 		};
 
-		custom_lock cl(this, cv, lk);
+		custom_lock cl(this, cv, lk);//自定义锁，cv可以与其它锁一起工作
 		interruption_point();
 		cv.wait(cl);
 		interruption_point();
