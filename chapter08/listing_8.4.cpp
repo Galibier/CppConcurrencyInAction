@@ -1,26 +1,18 @@
+#include "threadsafe_stack.h"
+#include "join_threads.h"
 #include <list>
 #include <future>
 #include <vector>
 #include <thread>
 #include <atomic>
 #include <algorithm>
+#include <functional>
+#include <iostream>
 
 template <typename Iterator, typename T>
 struct accumulate_block {
 	T operator()(Iterator first, Iterator last) {
 		return std::accumulate(first, last, T());
-	}
-};
-
-class join_threads {
-	std::vector<std::thread>& threads;
-public:
-	explicit join_threads(std::vector<std::thread>& threads_) :threads(threads_) {}
-	~join_threads() {
-		for (unsigned long i = 0; i < threads.size(); ++i) {
-			if (threads[i].joinable())
-				threads[i].join();
-		}
 	}
 };
 
@@ -38,6 +30,7 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
 
 	std::vector<std::future<T>> futures(num_threads - 1);
 	std::vector<std::thread> threads(num_threads - 1);
+	// 1 当创建了线程容器，就对新类型创建了一个实例，可让退出线程进行汇入
 	join_threads joiner(threads);
 
 	Iterator block_start = first;
@@ -54,8 +47,16 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
 
 	T result = init;
 	for (unsigned long i = 0; i < (num_threads - 1); ++i) {
-		result += futures[i].get();
+		result += futures[i].get();// 2 将会阻塞线程，直到结果准备就绪
 	}
 	result += last_result;
 	return result;
+}
+
+int main()
+{
+	std::vector<int> l{ 35,3,4,44,66,22,11,222,333,55,1,0,9,6,35,3,4,44,66,22,11,222,333,55,1,0,9,6 };
+	std::cout << parallel_accumulate(l.begin(), l.end(), 0) << std::endl;
+	system("pause");
+	return 0;
 }

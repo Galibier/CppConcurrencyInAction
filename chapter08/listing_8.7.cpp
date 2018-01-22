@@ -1,19 +1,9 @@
+#include "join_threads.h"
 #include <thread>
 #include <vector>
 #include <algorithm>
+#include <iostream>
 #include <future>
-
-class join_threads {
-	std::vector<std::thread>& threads;
-public:
-	explicit join_threads(std::vector<std::thread>& threads_) :threads(threads_) {}
-	~join_threads() {
-		for (unsigned long i = 0; i < threads.size(); ++i) {
-			if (threads[i].joinable())
-				threads[i].join();
-		}
-	}
-};
 
 template <typename Iterator, typename Func>
 void parallel_for_each(Iterator first, Iterator last, Func f) {
@@ -36,7 +26,7 @@ void parallel_for_each(Iterator first, Iterator last, Func f) {
 	for (unsigned long i = 0; i < (num_threads - 1); ++i) {
 		Iterator block_end = block_start;
 		std::advance(block_end, block_size);
-		std::packaged_task<void(void)> task([=]() {std::for_each(block_start, block_end, f)});
+		std::packaged_task<void(void)> task([=]() {std::for_each(block_start, block_end, f); });
 		futures[i] = task.get_future();
 		threads[i] = std::thread(std::move(task));
 		block_start = block_end;
@@ -45,4 +35,16 @@ void parallel_for_each(Iterator first, Iterator last, Func f) {
 	for (unsigned long i = 0; i < (num_threads - 1); ++i) {
 		futures[i].get();
 	}
+}
+
+void op(int &i) {
+	i += 1;
+}
+
+int main(){
+	std::vector<int> vi{ 0, 1, 2, 3 };
+	parallel_for_each(vi.begin(), vi.end(), op);
+	std::cout << vi[1] << std::endl;
+	system("pause");
+	return 0;
 }

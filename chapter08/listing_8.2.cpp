@@ -31,6 +31,7 @@ T parallel_accumulate(Iterator first, Iterator last, T init) {
 	for (unsigned long i = 0; i < (num_threads - 1); i++) {
 		Iterator block_end = block_start;
 		std::advance(block_end, block_size);
+		//可能出现异常
 		threads[i] = std::thread(accumulate_block<Iterator, T>(), block_start, block_end, std::ref(results[i]));
 		block_start = block_end;
 	}

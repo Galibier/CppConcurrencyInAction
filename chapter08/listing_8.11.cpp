@@ -25,17 +25,18 @@ void parallel_partial_sum(Iterator first, Iterator last) {
 			try {
 				Iterator end = last;
 				++end;
-				std::partition_sum(begin, end, begin);
-				if (previous_end_value) {
-					value_type& addend = previous_end_value->get();
+				std::partition_sum(begin, end, begin);//库函数
+				//三种情况
+				if (previous_end_value) {//不是第一块
+					value_type& addend = previous_end_value->get();//等待前面线程传递值后，取得前块中尾值或抛出异常
 					*last += addend;
-					if (end_value) {
-						end_value->set_value(*last);
+					if (end_value) {//如果不是最后一块
+						end_value->set_value(*last);//传值给下个数据块
 					}
-					std::for_each(begin, last, [addend](value_type& item) {item += addend; });
+					std::for_each(begin, last, [addend](value_type& item) {item += addend; });//传入lambda
 				}
-				else if (end_value) {
-					end_value->set_value(*last);
+				else if (end_value) {//是第一块，但不是最后一块数据
+					end_value->set_value(*last);//传值给下个数据块
 				}
 
 			}
@@ -44,7 +45,7 @@ void parallel_partial_sum(Iterator first, Iterator last) {
 					end_value->set_exception(std::current_exception());
 				}
 				else {
-					throw;
+					throw;//如果是最后一块直接抛出异常
 				}
 			}
 		}
@@ -76,5 +77,5 @@ void parallel_partial_sum(Iterator first, Iterator last) {
 	}
 	Iterator final_element = block_start;
 	std::advance(final_element, std::distance(block_start, last) - 1);
-	process_chunk()(block_start, final_element, (num_threads > 1) ? &previous_end_values.back()) : 0, 0);
+	process_chunk()(block_start, final_element, (num_threads > 1) ? &previous_end_values.back() : 0, 0);
 }

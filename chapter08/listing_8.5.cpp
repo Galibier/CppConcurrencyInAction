@@ -3,14 +3,16 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <iostream>
 #include <algorithm>
+#include <numeric>
 
 template <typename Iterator, typename T>
 T parallel_accumulate(Iterator first, Iterator last, T init) {
 	unsigned long const length = std::distance(first, last);
 	unsigned long const max_chunk_size = 25;
 	if (length <= max_chunk_size) {
-		return std::accumulate(first, last, init);
+		return accumulate(first, last, init);
 	}
 	else {
 		Iterator mid_point = first;
