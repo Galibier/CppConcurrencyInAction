@@ -3,6 +3,7 @@
 #include <mutex>
 #include <stack>
 
+// code list 6-1
 struct empty_stack : std::exception {
   const char* what() const throw() { return "empty stack"; }
 };
@@ -25,6 +26,7 @@ class threadsafe_stack {
     std::lock_guard<std::mutex> lock(m);
     data.push(std::move(new_value));
   }
+
   std::shared_ptr<T> pop() {
     std::lock_guard<std::mutex> lock(m);
     if (data.empty()) throw empty_stack();
@@ -32,14 +34,21 @@ class threadsafe_stack {
     data.pop();
     return res;
   }
+
   void pop(T& value) {
     std::lock_guard<std::mutex> lock(m);
     if (data.empty()) throw empty_stack();
     value = std::move(data.top());
     data.pop();
   }
+
   bool empty() const {
     std::lock_guard<std::mutex> lock(m);
     return data.empty();
   }
 };
+
+int main() {
+  threadsafe_stack<int> ts;
+  return 0;
+}
